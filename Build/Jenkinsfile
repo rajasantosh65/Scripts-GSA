@@ -1,0 +1,99 @@
+#!/usr/bin/env groovy
+import hudson.model.*
+import jenkins.model.Jenkins
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
+import hudson.AbortException
+
+
+node {
+   
+    def versionNumberString = Jenkins.instance.getItem("build_number")
+    def builddisplay = Jenkins.instance.getItem("currentBuild.displayName")
+    def version = VersionNumber(versionNumberString: '${build_number}', skipFailedBuilds:true, versionPrefix: '1.0.0.')
+    currentBuild.displayName = "$version"
+    def lines
+   
+   try {
+        currentBuild.result = "SUCCESS"
+		
+stage ('branch-details'){
+echo "echo getting branch details for OMX-inbound"
+
+	dir('/apps/jenkins/workspace/omx-Jenkins-scripts-workflow') {
+		
+    sh 'pwd'
+    sh "chmod +x *.sh"
+   sh "./omx-branch.sh project.properties omx-inbound-build-workflow omx-Inbound 1.0.0 "
+	}		
+	     
+ dir("/apps/jenkins/workspace/OMX/"){
+     
+     lines = readFile('Inbound.txt').trim()
+ }
+  echo "$lines"
+} 
+    stage('checkout'){
+    
+    checkout([
+        $class: 'GitSCM', 
+        branches: [[name: "*/$lines"]], 
+        doGenerateSubmoduleConfigurations: false, 
+        extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: '/apps/jenkins/workspace/omx-inbound-build-workflow/omx-inbound']], 
+        submoduleCfg: [], 
+        userRemoteConfigs: [[url: 'git@github.xposc.com:BusApp-OMX/omx-inbound.git']]])   
+	    
+    }
+    stage('Build'){
+        echo "checking out dependencies for OMX-inbound"
+        sh 'pwd'
+        dir("../omx-Jenkins-scripts-workflow/") 
+         {
+		 sh "chmod +x *.sh"
+        sh "./build.sh dependency.properties omx-inbound-build-workflow omx-inbound all"
+         }
+	    
+	    
+		 dir("../omx-Jenkins-scripts-workflow/omx-inbound/") 
+         {
+		 sh "chmod +x *.sh"
+        sh "./omx-inbound-build.sh omx-inbound-build-workflow $version"
+        }
+     }
+        
+        stage('archiving'){
+         sh 'pwd'
+         dir("/apps/jenkins/workspace/omx-inbound-build-workflow/omx-inbound/target/") 
+         {
+            archiveArtifacts artifacts: "**/*.jar" 
+            //junit "**/target/surefire-reports/*.xml"
+         }
+         
+     } 
+     
+     stage('Stage:Fortify-Scan') {
+
+	echo "Starting with the Fortify Scan"
+        build job: 'OMX-Inbound-FortifyScan',
+	parameters: [string(name: 'version', value: "$version"),
+				string(name: 'branch', value: "$lines"),
+				string(name: 'UpstreamJobName', value: "${env.JOB_NAME}")],
+	wait: false
+                                 }
+    stage('Dev-deploy'){
+    
+    echo "Deploying OMX-inbound to Dev environment"
+    dir('/apps/jenkins/workspace/omx-Jenkins-scripts-workflow/omx-inbound/') {
+	
+	 sh "chmod +x *.sh"
+     sh "BUILD_ID=dontKillMe ./OMX-inbound-Deploy.sh omx-inbound omxuser $version tsgvm00827"
+      }
+    }  
+   }  catch (any) {
+
+        currentBuild.result = "FAILURE"
+
+        throw any //rethrow exception to prevent the build from proceeding
+    } finally {
+        step([$class: 'Mailer', notifyEveryUnstableBuild: true, recipients: 'itepus@riasolutionsgroup.com rgodavarthy@newbreed.com msimu@riasolutionsgroup.com phani.kumar@xpo.com venu.gopal@xpo.com Forhad.Ahmed@xpo.com manoj.chopra@xpo.com lucian.moldovan@xpo.com Joylin.Raj@xpo.com Vijay.Shekar@xpo.com Daniel.Mount@xpo.com', sendToIndividuals: true])
+    }
+}
