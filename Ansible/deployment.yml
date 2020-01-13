@@ -1,0 +1,35 @@
+---
+- hosts: "{{ variable_hosts | default('empty_group') }}"
+  tasks:
+    - name: Stop service httpd, if started
+      become: true
+      service:
+        name: inbound
+        state: stopped
+      when: "{{ ansible_hostname == 'inbound-qa' }}"
+
+
+    - name: Deploying jar file using fetch ( fetching from tsgvm00386 to ansible master)
+      become: true
+      run_once: yes
+      fetch:
+        src:  /apps/jenkins/Application-artifacts/inbound/Dev/Release/19.8/19.8.97/inbound.jar
+        dest: tmp/ 
+        flat: yes
+    
+    - name: deploying the jar to remote server
+      become: true
+      copy: 
+        src:  tmp/inbound.jar
+        dest: /apps/app/inbound
+        mode: 0755
+        group: omxuser
+        owner: omxuser
+      when: "{{ ansible_hostname == 'inbound-qa' }}"
+
+    - name: Stop service httpd, if started
+      become: true
+      service:
+        name: inbound
+        state: start
+      when: "{{ ansible_hostname == 'inbound-qa' }}"
