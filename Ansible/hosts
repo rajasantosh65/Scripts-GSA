@@ -1,11 +1,14 @@
 ### Ansible example inventory file###
 
 [inbound-servers]
-host1.xyz.com
-host2.xyz.com
-host3.xyz.com
-host4.xyz.com
+host1.xpo.com
+host2.xpo.com
+host3.xpo.com
+host4.xpo.com
 
  [nginxserver]
-host1.xyz.com
+host1.xpo.com
 
+[java-install-VM]
+host3.xpo.com
+host4.xpo.com
