@@ -1,0 +1,11 @@
+### Ansible example inventory file###
+
+[inbound-servers]
+host1.xyz.com
+host2.xyz.com
+host3.xyz.com
+host4.xyz.com
+
+ [nginxserver]
+host1.xyz.com
+
