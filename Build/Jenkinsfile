@@ -8,7 +8,7 @@ import hudson.AbortException
 
 
 node {
-@Library('shared-libraries')_
+@Library('libraries')_
 def buildResult = "SUCCESS"
 env.workspace = pwd()
 echo "$workspace"
@@ -88,7 +88,7 @@ currentBuild.displayName = "$version"
 def versionresult = currentBuild.displayName
 echo "this is $versionresult"
 	
-OMXCMXbuild {
+OMbuild {
 
  omxparentgit = "git@github.xposc.com:BusApp-OMX/omx-parent.git"
  branchname = "Release"
