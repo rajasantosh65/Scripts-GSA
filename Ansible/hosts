@@ -9,6 +9,8 @@ host4.xpo.com
  [nginxserver]
 host1.xpo.com
 
-[java-install-VM]
+[inbound-qa]
 host3.xpo.com
 host4.xpo.com
+
+
